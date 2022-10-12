@@ -11,8 +11,7 @@ class EpicKitchensDataset(Dataset):
         labels_df = load_pickle_data(labels_path)
         self.labels = []
         self.is_flow = is_flow
-        self.rgb_input_names = []
-        self.flow_input_names = []
+        self.input_names = []
         for index, row in labels_df.iterrows():
             seg_img_names = sample_train_segment(
                 16,
@@ -20,7 +19,7 @@ class EpicKitchensDataset(Dataset):
                 row["stop_frame"],
                 row["participant_id"],
                 row["video_id"],
-				is_flow=is_flow
+                is_flow=is_flow
             )
             self.labels.append(row["verb_class"])
             self.input_names.append(seg_img_names)
@@ -30,10 +29,10 @@ class EpicKitchensDataset(Dataset):
 
     def __getitem__(self, index):
         print(index)
-		if self.is_flow:
+        if self.is_flow:
             return self.labels[index], load_flow_frames(self.input_names[index])
         else:
-            return self.labels[index], load_rgb_frames(self.rgb_input_names[index])
+            return self.labels[index], load_rgb_frames(self.input_names[index])
 
 
 def load_pickle_data(file_name):
@@ -85,12 +84,12 @@ def sample_train_segment(temporal_window, start_frame, end_frame, domain_num, pa
                 f"./epic_kitchens_data/flow/{domain_num}/{part_id}/v/frame_{str(int(i/2)).zfill(10)}.jpg"
             ])
         else:
-            seg_img_names.append(f"./epic_kitchens_data/rgb/{domain_num}/{part_id}/frame_{str(i).zfill(10)}.jpg"
+            seg_img_names.append(f"./epic_kitchens_data/rgb/{domain_num}/{part_id}/frame_{str(i).zfill(10)}.jpg")
     return seg_img_names
 
 
 if __name__ == "__main__":
-    train_dataset = EpicKitchensDataset(labels_path="../MM-SADA-code/Annotations/D2_train.pkl", False)
+    train_dataset = EpicKitchensDataset(labels_path="../MM-SADA-code/Annotations/D2_train.pkl", is_flow=False)
     train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=False)
     for (labels, rgb_inputs) in train_dataloader:
         print(labels)
