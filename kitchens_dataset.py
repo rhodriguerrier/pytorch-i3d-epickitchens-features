@@ -10,8 +10,8 @@ class RgbFlowKitchensDataset(Dataset):
     def __init__(self, labels_path):
         labels_df = load_pickle_data(labels_path)
         self.labels = []
-        self.rgb_inputs = []
-        self.flow_inputs = []
+        self.rgb_input_names = []
+        self.flow_input_names = []
         for index, row in labels_df.iterrows():
             rgb_seg_img_names, flow_seg_img_names = sample_train_segment(
                 16,
@@ -21,14 +21,15 @@ class RgbFlowKitchensDataset(Dataset):
                 row["video_id"]
             )
             self.labels.append(row["verb_class"])
-            self.rgb_inputs.append(load_rgb_frames(rgb_seg_img_names))
-            self.flow_inputs.append(load_flow_frames(flow_seg_img_names))
+            self.rgb_input_names.append(rgb_seg_img_names)
+            self.flow_input_names.append(flow_seg_img_names)
 
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, index):
-        return self.labels[index], self.rgb_inputs[index], self.flow_inputs[index]
+        print(index)
+        return self.labels[index], load_rgb_frames(self.rgb_input_names[index]), load_flow_frames(self.flow_input_names[index])
 
 
 def load_pickle_data(file_name):
@@ -38,20 +39,26 @@ def load_pickle_data(file_name):
 
 
 def load_flow_frames(flow_filenames):
-    frames = []
-    for group in flow_filenames:
+    for i, group in enumerate(flow_filenames):
         img_u = np.array(Image.open(group[0]))
         img_v = np.array(Image.open(group[1]))
-        frames.append(np.array([img_u, img_v]))
-    return np.asarray(frames).transpose([1, 0, 2, 3])
+        if i == 0:
+            frames = np.array([[img_u, img_v]])
+        else:
+            frames = np.concatenate((frames, np.array([[img_u, img_v]])), axis=0)
+    frames_reshape = frames.transpose([1, 0, 2, 3])
+    return (((frames_reshape / 255) * 2) - 1)
 
 
 def load_rgb_frames(rgb_filenames):
-    num_channels = 3
-    frames = []
-    for filename in rgb_filenames:
-        frames.append(np.array(Image.open(rgb_filenames[0])))
-    return np.asarray(frames).transpose([3, 0, 1, 2])
+    for i, filename in enumerate(rgb_filenames):
+        img_matrix = np.array(Image.open(filename))
+        if i == 0:
+            frames = np.array([img_matrix])
+        else:
+            frames = np.concatenate((frames, np.array([img_matrix])), axis=0)
+    frames_reshape = frames.transpose([3, 0, 1, 2])
+    return (((frames_reshape / 255) * 2) - 1)
 
 
 def sample_train_segment(temporal_window, start_frame, end_frame, domain_num, part_id):
@@ -78,7 +85,7 @@ def sample_train_segment(temporal_window, start_frame, end_frame, domain_num, pa
 
 
 if __name__ == "__main__":
-    train_dataset = RgbFlowKitchensDataset(labels_path="./epic_kitchens_data/label_lookup/D2_train.pkl")
+    train_dataset = RgbFlowKitchensDataset(labels_path="../MM-SADA-code/Annotations/D2_train.pkl")
     train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=False)
     for (labels, rgb_inputs, flow_inputs) in train_dataloader:
         print(labels)
