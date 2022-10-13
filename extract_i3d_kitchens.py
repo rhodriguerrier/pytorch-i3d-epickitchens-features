@@ -24,7 +24,7 @@ class KitchenExtraction:
         self.model.cuda()
         self.model = nn.DataParallel(self.model)
         self.dataset = EpicKitchensDataset(labels_path=labels_path, is_flow=is_flow)
-        self.dataloader = DataLoader(self.dataset, batch_size=64, shuffle=False)
+        self.dataloader = DataLoader(self.dataset, batch_size=batch_size, shuffle=False)
 
 
     def extract(self):
@@ -43,14 +43,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Epic Kitchens Feature Extraction")
     parser.add_argument("--train_domain_id", action="store", dest="train_domain_id", default="D2")
     parser.add_argument("--domain_id", action="store", dest="domain_id", default="D2")
-    parser.add_argument("--epochs", action="store", dest="epochs", default="100")
-    parser.add_argument("--batch_size", action="store", dest="batch_size", default="2")
+    parser.add_argument("--batch_size", action="store", dest="batch_size", default="64")
     parser.add_argument("--flow", action="store_true", dest="is_flow")
     parser.set_defaults(is_flow=False)
     args = parser.parse_args()
     model = KitchenExtraction(
         batch_size=int(args.batch_size),
-        labels_path=f"./epic_kitchens/label_lookup/{args.domain_id}_train.pkl",
+        labels_path=f"./epic_kitchens_data/label_lookup/{args.domain_id}_train.pkl",
         domain_id=args.domain_id,
         train_domain_id=args.train_domain_id,
         is_flow=args.is_flow
