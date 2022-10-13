@@ -10,6 +10,7 @@ class EpicKitchensDataset(Dataset):
     def __init__(self, labels_path, is_flow=False):
         labels_df = load_pickle_data(labels_path)
         self.labels = []
+        self.narration_ids = []
         self.is_flow = is_flow
         self.input_names = []
         for index, row in labels_df.iterrows():
@@ -22,6 +23,7 @@ class EpicKitchensDataset(Dataset):
                 is_flow=is_flow
             )
             self.labels.append(row["verb_class"])
+            self.narration_ids.append(f"{row['video_id']}_{row['uid']}")
             self.input_names.append(seg_img_names)
 
     def __len__(self):
@@ -30,9 +32,9 @@ class EpicKitchensDataset(Dataset):
     def __getitem__(self, index):
         print(index)
         if self.is_flow:
-            return self.labels[index], load_flow_frames(self.input_names[index])
+            return self.labels[index], load_flow_frames(self.input_names[index]), self.narration_ids[index]
         else:
-            return self.labels[index], load_rgb_frames(self.input_names[index])
+            return self.labels[index], load_rgb_frames(self.input_names[index]), self.narration_ids[index]
 
 
 def load_pickle_data(file_name):
@@ -84,7 +86,8 @@ def sample_train_segment(temporal_window, start_frame, end_frame, domain_num, pa
                 f"./epic_kitchens_data/flow/{domain_num}/{part_id}/v/frame_{str(int(i/2)).zfill(10)}.jpg"
             ])
         else:
-            seg_img_names.append(f"./epic_kitchens_data/rgb/{domain_num}/{part_id}/frame_{str(i).zfill(10)}.jpg")
+            seg_img_names.append(f"../../EPIC-KITCHENS/{domain_num}/rgb_frames/{part_id}/frame_{str(i).zfill(10)}.jpg")
+            #seg_img_names.append(f"./epic_kitchens_data/rgb/{domain_num}/{part_id}/frame_{str(i).zfill(10)}.jpg")
     return seg_img_names
 
 
