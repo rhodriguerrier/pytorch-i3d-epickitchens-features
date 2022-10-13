@@ -32,21 +32,22 @@ class EpicKitchensI3D:
         self.lr_sched = optim.lr_scheduler.MultiStepLR(self.optim, [300, 1000])
         self.num_steps_per_update = 4
         self.train_dataset = EpicKitchensDataset(labels_path=train_labels_path, is_flow=is_flow)
-        self.train_dataloader = DataLoader(self.train_dataset, batch_size=64, shuffle=True)
+        self.train_dataloader = DataLoader(self.train_dataset, batch_size=batch_size, shuffle=True)
         self.ce_loss = nn.CrossEntropyLoss()
 
 
     def train(self):
-        for epoch in self.epochs:
+        for epoch in range(self.epochs):
             print(f"Epoch: {epoch}")
             sum_loss = 0
             counter = 0
             self.optim.zero_grad()
             for (train_labels, train_inputs, narration_ids) in self.train_dataloader:
                 counter += 1
+                train_inputs = torch.tensor(train_inputs).float()
                 train_inputs = Variable(train_inputs.cuda())
                 train_labels = Variable(train_labels.cuda())
-                output_logits = self.model(train_inputs)
+                output = self.model(train_inputs)
                 train_ce_loss = self.ce_loss(
                     torch.reshape(output, (output.size()[0], output.size()[1])),
                     train_labels.long()
