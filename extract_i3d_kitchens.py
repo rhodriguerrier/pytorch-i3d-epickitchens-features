@@ -17,10 +17,10 @@ class KitchenExtraction:
         self.batch_size = batch_size
         if is_flow:
             self.model = InceptionI3d(8, in_channels=2)
-            self.model.load_state_dict(torch.load(f'./flow/{train_domain_id}_train.pt'))
+            self.model.load_state_dict(torch.load(f'./flow_{train_domain_id}_train.pt'))
         else:
             self.model = InceptionI3d(8, in_channels=3)
-            self.model.load_state_dict(torch.load(f'./rgb/{train_domain_id}_train.pt'))
+            self.model.load_state_dict(torch.load(f'./rgb_{train_domain_id}_train.pt'))
         self.model.cuda()
         self.model = nn.DataParallel(self.model)
         self.dataset = EpicKitchensDataset(labels_path=labels_path, is_flow=is_flow)
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     model = KitchenExtraction(
         batch_size=int(args.batch_size),
-        labels_path=f"./epic_kitchens_data/label_lookup/{args.domain_id}_train.pkl",
+        labels_path=f"/user/work/rg16964/label_lookup/{args.domain_id}_train.pkl",
         domain_id=args.domain_id,
         train_domain_id=args.train_domain_id,
         is_flow=args.is_flow
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     features, narration_ids = model.extract()
     pickle_dict = {
         "features": {
-            "RGB": features.detach().numpy()
+            "RGB": features.detach().cpu().numpy()
         },
         "narration_ids": narration_ids
     }

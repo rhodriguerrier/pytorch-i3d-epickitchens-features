@@ -66,7 +66,7 @@ def load_rgb_frames(rgb_filenames):
     return (((frames_reshape / 255) * 2) - 1)
 
 
-def sample_train_segment(temporal_window, start_frame, end_frame, domain_num, part_id, is_flow):
+def sample_train_segment(temporal_window, start_frame, end_frame, part_id, video_id, is_flow):
     half_frame = int(temporal_window/2)
     step = 2
     seg_img_names = []
@@ -82,17 +82,16 @@ def sample_train_segment(temporal_window, start_frame, end_frame, domain_num, pa
     for i in range(centre_frame-(step*half_frame), centre_frame+(step*half_frame), step):
         if is_flow:
             seg_img_names.append([
-                f"./epic_kitchens_data/flow/{domain_num}/{part_id}/u/frame_{str(int(i/2)).zfill(10)}.jpg",
-                f"./epic_kitchens_data/flow/{domain_num}/{part_id}/v/frame_{str(int(i/2)).zfill(10)}.jpg"
+                f"/user/home/rg16964/epic_kitchens_data/flow/{part_id}/{video_id}/u/frame_{str(int(i/2)).zfill(10)}.jpg",
+                f"/user/home/rg16964/epic_kitchens_data/flow/{part_id}/{video_id}/v/frame_{str(int(i/2)).zfill(10)}.jpg"
             ])
         else:
-            seg_img_names.append(f"../../EPIC-KITCHENS/{domain_num}/rgb_frames/{part_id}/frame_{str(i).zfill(10)}.jpg")
-            #seg_img_names.append(f"./epic_kitchens_data/rgb/{domain_num}/{part_id}/frame_{str(i).zfill(10)}.jpg")
+            seg_img_names.append(f"/user/home/rg16964/epic_kitchens_data/rgb/{part_id}/{video_id}/frame_{str(i).zfill(10)}.jpg")
     return seg_img_names
 
 
 if __name__ == "__main__":
-    train_dataset = EpicKitchensDataset(labels_path="../MM-SADA-code/Annotations/D2_train.pkl", is_flow=False)
+    train_dataset = EpicKitchensDataset(labels_path="/user/home/rg16964/label_lookup/D2_train.pkl", is_flow=False)
     train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=False)
     for (labels, rgb_inputs) in train_dataloader:
         print(labels)

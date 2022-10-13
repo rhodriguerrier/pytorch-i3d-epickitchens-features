@@ -64,9 +64,9 @@ class EpicKitchensI3D:
                         sum_loss = 0
         print("Epochs done, saving model...")
         if self.is_flow:
-            torch.save(self.model.state_dict(), f"./flow/{self.domain_id}_train.pt")
+            torch.save(self.model.state_dict(), f"./flow_{self.domain_id}_train.pt")
         else:
-            torch.save(self.model.state_dict(), f"./rgb/{self.domain_id}_train.pt")
+            torch.save(self.model.state_dict(), f"./rgb_{self.domain_id}_train.pt")
 
 
 if __name__ == "__main__":
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         epochs=int(args.epochs),
         init_lr=0.1,
         batch_size=int(args.batch_size),
-        train_labels_path=f"./epic_kitchens_data/label_lookup/{args.domain_id}_train.pkl",
+        train_labels_path=f"/user/work/rg16964/label_lookup/{args.domain_id}_train.pkl",
         domain_id=args.domain_id,
         is_flow=args.is_flow
     )
