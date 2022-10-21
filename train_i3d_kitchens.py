@@ -5,8 +5,10 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 from torch.optim import lr_scheduler
 from torch.autograd import Variable
+from torchvision import transforms
 from kitchens_dataset import EpicKitchensDataset
 from pytorch_i3d import InceptionI3d
+import videotransforms
 import numpy as np
 import pickle
 import argparse
@@ -31,7 +33,11 @@ class EpicKitchensI3D:
         self.optim = optim.SGD(self.model.parameters(), lr=self.lr, momentum=0.9, weight_decay=0.0000001)
         self.lr_sched = optim.lr_scheduler.MultiStepLR(self.optim, [300, 1000])
         self.num_steps_per_update = 4
-        self.train_dataset = EpicKitchensDataset(labels_path=train_labels_path, is_flow=is_flow)
+        self.train_transforms = transforms.Compose([
+            videotransforms.RandomCrop(224),
+            videotransforms.RandomHorizontalFlip()
+        ])
+        self.train_dataset = EpicKitchensDataset(labels_path=train_labels_path, is_flow=is_flow, transforms=self.train_transforms)
         self.train_dataloader = DataLoader(self.train_dataset, batch_size=batch_size, shuffle=True)
         self.ce_loss = nn.CrossEntropyLoss()
 
@@ -42,8 +48,11 @@ class EpicKitchensI3D:
             sum_loss = 0
             counter = 0
             self.optim.zero_grad()
+            batch_counter = 0
             for (train_labels, train_inputs, narration_ids) in self.train_dataloader:
                 counter += 1
+                batch_counter += 1
+                print(f"Batch Number: {batch_counter}")
                 train_inputs = torch.tensor(train_inputs).float()
                 train_inputs = Variable(train_inputs.cuda())
                 train_labels = Variable(train_labels.cuda())
@@ -61,7 +70,7 @@ class EpicKitchensI3D:
                     self.optim.zero_grad()
                     self.lr_sched.step()
                     if epoch % 10 == 0:
-                        print(f"Total Loss: {sun_loss / 10}")
+                        print(f"Total Loss: {sum_loss / 10}")
                         sum_loss = 0
         print("Epochs done, saving model...")
         if self.is_flow:
@@ -72,9 +81,9 @@ class EpicKitchensI3D:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Epic Kitchens Feature Extraction")
-    parser.add_argument("--domain_id", action="store", dest="domain_id", default="D2")
+    parser.add_argument("--domain_id", action="store", dest="domain_id", default="D1")
     parser.add_argument("--epochs", action="store", dest="epochs", default="100")
-    parser.add_argument("--batch_size", action="store", dest="batch_size", default="2")
+    parser.add_argument("--batch_size", action="store", dest="batch_size", default="10")
     parser.add_argument("--flow", action="store_true", dest="is_flow")
     parser.set_defaults(is_flow=False)
     args = parser.parse_args()

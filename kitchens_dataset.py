@@ -7,8 +7,9 @@ from PIL import Image
 
 
 class EpicKitchensDataset(Dataset):
-    def __init__(self, labels_path, is_flow=False):
+    def __init__(self, labels_path, is_flow=False, transforms=None):
         labels_df = load_pickle_data(labels_path)
+        self.transforms = transforms
         self.labels = []
         self.narration_ids = []
         self.is_flow = is_flow
@@ -32,15 +33,27 @@ class EpicKitchensDataset(Dataset):
     def __getitem__(self, index):
         print(index)
         if self.is_flow:
-            return self.labels[index], load_flow_frames(self.input_names[index]), self.narration_ids[index]
+            imgs = load_flow_frames(self.input_names[index])
+            imgs = self.transforms(imgs)
+            imgs = flow_video_to_tensor(imgs)
         else:
-            return self.labels[index], load_rgb_frames(self.input_names[index]), self.narration_ids[index]
+            imgs = load_rgb_frames(self.input_names[index])
+            imgs = self.transforms(imgs)
+            imgs = rgb_video_to_tensor(imgs)
+        return self.labels[index], imgs, self.narration_ids[index]
 
 
 def load_pickle_data(file_name):
     with open(file_name, 'rb') as f:
         data = pickle.load(f)
         return data
+
+def rgb_video_to_tensor(frames):
+    return frames.transpose([3, 0, 1, 2])
+
+
+def flow_video_to_tensor(frames):
+    return frames.transpose([1, 0, 2, 3])
 
 
 def load_flow_frames(flow_filenames):
@@ -51,8 +64,7 @@ def load_flow_frames(flow_filenames):
             frames = np.array([[img_u, img_v]])
         else:
             frames = np.concatenate((frames, np.array([[img_u, img_v]])), axis=0)
-    frames_reshape = frames.transpose([1, 0, 2, 3])
-    return (((frames_reshape / 255) * 2) - 1)
+    return (((frames / 255) * 2) - 1)
 
 
 def load_rgb_frames(rgb_filenames):
@@ -62,8 +74,7 @@ def load_rgb_frames(rgb_filenames):
             frames = np.array([img_matrix])
         else:
             frames = np.concatenate((frames, np.array([img_matrix])), axis=0)
-    frames_reshape = frames.transpose([3, 0, 1, 2])
-    return (((frames_reshape / 255) * 2) - 1)
+    return (((frames / 255) * 2) - 1)
 
 
 def sample_train_segment(temporal_window, start_frame, end_frame, part_id, video_id, is_flow):
