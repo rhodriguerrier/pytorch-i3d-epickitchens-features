@@ -45,6 +45,7 @@ class EpicKitchensI3D:
 
     def train(self):
         for epoch in range(self.epochs):
+            break
             logging.info(f"Epoch: {epoch}")
             sum_loss = 0
             counter = 0

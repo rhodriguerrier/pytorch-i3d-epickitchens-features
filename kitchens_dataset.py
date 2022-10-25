@@ -42,6 +42,84 @@ class EpicKitchensDataset(Dataset):
         return self.labels[index], imgs, self.narration_ids[index]
 
 
+class SequentialClassKitchens(Dataset):
+    def __init__(self, labels_path, class_num, temporal_window=16, is_flow=False):
+        labels_df = load_pickle_data(labels_path)
+        filtered_df = labels_df[labels_df["verb_class"] == class_num]
+        self.labels = []
+        self.input_names = []
+        self.frame_start_numbers = []
+        self.is_flow = is_flow
+        for index, row in filtered_df.iterrows():
+            clip_length = row["stop_frame"] - row["start_frame"]
+            num_windows, total_window_len = get_num_seq_windows(clip_length, temporal_window)
+            frame_start_numbers = get_start_frame_numbers(
+                row["start_frame"],
+                row["stop_frame"],
+                total_window_len,
+                num_windows
+            )
+            self.labels.append(f"{row['verb_class']}.{row['uid']}")
+            self.input_names.append(
+                sample_test_sequential_frames(
+                    frame_start_numbers,
+                    temporal_window,
+                    self.is_flow,
+                    row["participant_id"],
+                    row["video_id"]
+                )
+            )
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, index):
+        seq_window_imgs = []
+        for frame_paths in self.input_names[index]:
+            if self.is_flow:
+                imgs = load_flow_frames(frame_paths)
+            else:
+                imgs = load_rgb_frames(frame_paths)
+            imgs = video_to_tensor(imgs)
+            seq_window_imgs.append(imgs)
+        return self.labels[index], seq_window_imgs
+
+
+def sample_test_sequential_frames(start_frames, temporal_window_len, is_flow, part_id, video_id):
+    seq_frame_names = []
+    for start_frame in start_frames:
+        if is_flow:
+            seq_frame_names.append([
+                [
+                    f"/user/work/rg16964/epic_kitchens_data/flow/{part_id}/{video_id}/u/frame_{str(int((start_frame+i)/2)).zfill(10)}.jpg",
+                    f"/user/work/rg16964/epic_kitchens_data/flow/{part_id}/{video_id}/v/frame_{str(int((start_frame+i)/2)).zfill(10)}.jpg"
+                ] for i in range(temporal_window_len)
+            ])
+        else:
+            seq_frame_names.append(
+                [f"/user/work/rg16964/epic_kitchens_data/rgb/{part_id}/{video_id}/frame_{str((start_frame+i)).zfill(10)}.jpg" for i in range(temporal_window_len)]
+            )
+    return seq_frame_names
+
+
+def get_num_seq_windows(clip_length, window_len):
+    num_windows = round(clip_length/window_len)
+    window_total_len = (num_windows*window_len) - (2*(num_windows-1))
+    if window_total_len > clip_length:
+        num_windows -= 1
+        window_total_len = (num_windows*window_len) - (2*(num_windows-1))
+    return num_windows, window_total_len
+
+
+def get_start_frame_numbers(start_frame, stop_frame, total_window_len, num_windows):
+    centre_frame = int(start_frame + ((stop_frame - start_frame)/2))
+    half_window_len = int(total_window_len / 2)
+    frame_start_numbers = []
+    for i in range(num_windows):
+        frame_start_numbers.append((centre_frame-half_window_len) + (16*i) - (2*i))
+    return frame_start_numbers
+
+
 def load_pickle_data(file_name):
     with open(file_name, 'rb') as f:
         data = pickle.load(f)
