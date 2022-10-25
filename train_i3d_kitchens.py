@@ -12,6 +12,7 @@ import videotransforms
 import numpy as np
 import pickle
 import argparse
+import logging
 
 
 class EpicKitchensI3D:
@@ -23,16 +24,16 @@ class EpicKitchensI3D:
         self.batch_size = batch_size
         if is_flow:
             self.model = InceptionI3d(400, in_channels=2)
-            self.model.load_state_dict(torch.load('models/flow_imagenet.pt'))
+            self.model.load_state_dict(torch.load('/user/work/rg16964/flow_imagenet.pt'))
         else:
             self.model = InceptionI3d(400, in_channels=3)
-            self.model.load_state_dict(torch.load('models/rgb_imagenet.pt'))
+            self.model.load_state_dict(torch.load('/user/work/rg16964/rgb_imagenet.pt'))
         self.model.replace_logits(8)
         self.model.cuda()
         self.model = nn.DataParallel(self.model)
         self.optim = optim.SGD(self.model.parameters(), lr=self.lr, momentum=0.9, weight_decay=0.0000001)
         self.lr_sched = optim.lr_scheduler.MultiStepLR(self.optim, [300, 1000])
-        self.num_steps_per_update = 4
+        self.num_steps_per_update = 10
         self.train_transforms = transforms.Compose([
             videotransforms.RandomCrop(224),
             videotransforms.RandomHorizontalFlip()
@@ -44,7 +45,7 @@ class EpicKitchensI3D:
 
     def train(self):
         for epoch in range(self.epochs):
-            print(f"Epoch: {epoch}")
+            logging.info(f"Epoch: {epoch}")
             sum_loss = 0
             counter = 0
             self.optim.zero_grad()
@@ -52,7 +53,7 @@ class EpicKitchensI3D:
             for (train_labels, train_inputs, narration_ids) in self.train_dataloader:
                 counter += 1
                 batch_counter += 1
-                print(f"Batch Number: {batch_counter}")
+                logging.info(f"Batch Number: {batch_counter}")
                 train_inputs = torch.tensor(train_inputs).float()
                 train_inputs = Variable(train_inputs.cuda())
                 train_labels = Variable(train_labels.cuda())
@@ -70,13 +71,13 @@ class EpicKitchensI3D:
                     self.optim.zero_grad()
                     self.lr_sched.step()
                     if epoch % 10 == 0:
-                        print(f"Total Loss: {sum_loss / 10}")
+                        logging.info(f"Total Loss: {sum_loss / 10}")
                         sum_loss = 0
-        print("Epochs done, saving model...")
+        logging.info("Epochs done, saving model...")
         if self.is_flow:
-            torch.save(self.model.state_dict(), f"./flow_{self.domain_id}_train.pt")
+            torch.save(self.model.state_dict(), f"./temp_models/flow_{self.domain_id}_train.pt")
         else:
-            torch.save(self.model.state_dict(), f"./rgb_{self.domain_id}_train.pt")
+            torch.save(self.model.state_dict(), f"./temp_models/rgb_{self.domain_id}_train.pt")
 
 
 if __name__ == "__main__":
@@ -87,6 +88,18 @@ if __name__ == "__main__":
     parser.add_argument("--flow", action="store_true", dest="is_flow")
     parser.set_defaults(is_flow=False)
     args = parser.parse_args()
+    if args.is_flow:
+        logging_filename = f"train_{args.domain_id}_flow_logs.log"
+    else:
+        logging_filename = f"train_{args.domain_id}_rgb_logs.log"
+    logging.basicConfig(
+        filename=logging_filename,
+        filemode='a',
+        format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+        datefmt='%H:%M:%S',
+        level=logging.DEBUG
+    )
+    logging.info("In main function")
     model = EpicKitchensI3D(
         epochs=int(args.epochs),
         init_lr=0.1,
