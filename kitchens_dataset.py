@@ -59,7 +59,7 @@ class SequentialClassKitchens(Dataset):
                 total_window_len,
                 num_windows
             )
-            self.labels.append(f"{row['verb_class']}.{row['uid']}")
+            self.labels.append(f"{row['verb_class']}_{row['uid']}")
             self.input_names.append(
                 sample_test_sequential_frames(
                     frame_start_numbers,
